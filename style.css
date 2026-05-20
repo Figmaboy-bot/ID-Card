@@ -1,0 +1,69 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+img {
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+body {
+  background: #ffffff;
+  overflow: hidden;
+}
+
+/* Horizontally centred, pinned to the top of the viewport */
+.anchor {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 321px;
+}
+
+/* Handles the vertical offset (hides the V-shape) and uniform scale */
+.stage {
+  width: 321px;
+  height: 1014px;
+  transform-origin: top center;
+}
+
+/* Pendulum rotation lives here */
+.scene {
+  position: relative;
+  width: 321px;
+  height: 1014px;
+  transform-origin: center top;
+  cursor: grab;
+  user-select: none;
+  will-change: transform;
+}
+
+.scene.dragging { cursor: grabbing; }
+
+.lanyard {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 321px;
+  height: 763px;
+  display: block;
+  z-index: 2;
+}
+
+.card {
+  position: absolute;
+  left: 54px;
+  top: 704px;
+  width: 206px;
+  height: 310px;
+  z-index: 1;
+}
+
+.card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
