@@ -38,6 +38,7 @@ body {
   transform-origin: center top;
   cursor: grab;
   user-select: none;
+  touch-action: none;
   will-change: transform;
 }
 
