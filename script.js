@@ -1,5 +1,7 @@
-const scene = document.querySelector('.scene');
-const stage = document.querySelector('.stage');
+const scene   = document.querySelector('.scene');
+const stage   = document.querySelector('.stage');
+const lanyard = document.querySelector('.lanyard');
+const cardEl  = document.querySelector('.card');
 
 const HIDE         = 420;
 const SCALE_FACTOR = 0.75;
@@ -20,8 +22,10 @@ window.addEventListener('resize', fitToViewport);
 // ── State ─────────────────────────────────────────────────────────────────────
 
 let isDragging = false;
-let angle = 0,  angularVel = 0;
-let yPx  = 0,   yVel       = 0;
+let angle = 0,    angularVel = 0;
+let yPx   = 0,    yVel       = 0;
+let cardLag  = 0; // secondary rotation on the card to simulate rope flex
+let prevAngle = 0;
 let rafId = null;
 let ptrHistory = [];
 
@@ -36,6 +40,14 @@ const MAX_DOWN    = 350;
 
 function applyTransforms() {
   scene.style.transform = `translateY(${yPx}px) rotate(${angle}deg)`;
+
+  // Card lags behind the rope: pivot from its top-center (the clasp).
+  // dAngle > 0 → swinging right → card tilts left relative to scene.
+  const dAngle = angle - prevAngle;
+  prevAngle = angle;
+  const lagTarget = Math.max(-14, Math.min(14, -dAngle * 6));
+  cardLag += (lagTarget - cardLag) * 0.14;
+  cardEl.style.transform = `rotate(${cardLag}deg)`;
 }
 
 // ── Physics loop ──────────────────────────────────────────────────────────────
@@ -53,12 +65,15 @@ function physicsLoop() {
 
   const settled =
     Math.abs(angle) < 0.05 && Math.abs(angularVel) < 0.05 &&
-    Math.abs(yPx)   < 0.05 && Math.abs(yVel)       < 0.05;
+    Math.abs(yPx)   < 0.05 && Math.abs(yVel)       < 0.05 &&
+    Math.abs(cardLag) < 0.05;
 
   if (settled) {
     angle = 0; angularVel = 0;
     yPx   = 0; yVel       = 0;
-    applyTransforms();
+    cardLag = 0; prevAngle = 0;
+    scene.style.transform = '';
+    cardEl.style.transform = '';
     scene.style.willChange = '';
     rafId = null;
     return;
@@ -91,7 +106,7 @@ function startPhysics(withVelocity) {
     angularVel = 0;
     yVel       = 0;
   }
-  if (rafId) { cancelAnimationFrame(rafId); }
+  if (rafId) cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(physicsLoop);
 }
 
@@ -104,8 +119,8 @@ function endDrag(withVelocity) {
 // ── Pointer events ────────────────────────────────────────────────────────────
 
 scene.addEventListener('pointerdown', (e) => {
-  isDragging  = true;
-  ptrHistory  = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
+  isDragging = true;
+  ptrHistory = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
   scene.setPointerCapture(e.pointerId);
   scene.classList.add('dragging');
@@ -113,11 +128,7 @@ scene.addEventListener('pointerdown', (e) => {
 });
 
 scene.addEventListener('pointermove', (e) => {
-  // Recover from a missed pointerup (e.g. button released outside the window).
-  if (isDragging && e.buttons === 0) {
-    endDrag(false);
-    return;
-  }
+  if (isDragging && e.buttons === 0) { endDrag(false); return; }
   if (!isDragging) return;
 
   const prev = ptrHistory[ptrHistory.length - 1];
@@ -133,17 +144,6 @@ scene.addEventListener('pointermove', (e) => {
   applyTransforms();
 });
 
-scene.addEventListener('pointerup', () => {
-  if (!isDragging) return;
-  endDrag(true);
-});
-
-scene.addEventListener('pointercancel', () => {
-  if (!isDragging) return;
-  endDrag(false);
-});
-
-// Catch missed pointerup when the window loses focus entirely.
-window.addEventListener('blur', () => {
-  if (isDragging) endDrag(false);
-});
+scene.addEventListener('pointerup',     () => { if (isDragging) endDrag(true);  });
+scene.addEventListener('pointercancel', () => { if (isDragging) endDrag(false); });
+window.addEventListener('blur',         () => { if (isDragging) endDrag(false); });
