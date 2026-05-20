@@ -22,10 +22,10 @@ window.addEventListener('resize', fitToViewport);
 // ── State ─────────────────────────────────────────────────────────────────────
 
 let isDragging = false;
-let angle = 0,    angularVel = 0;
-let yPx   = 0,    yVel       = 0;
-let cardLag  = 0; // secondary rotation on the card to simulate rope flex
-let prevAngle = 0;
+let angle = 0,      angularVel = 0;
+let yPx   = 0,      yVel       = 0;
+let cardAngle = 0,  cardAngVel = 0; // card's own secondary pendulum
+let prevAngVel = 0; // to compute angular acceleration each frame
 let rafId = null;
 let ptrHistory = [];
 
@@ -40,14 +40,7 @@ const MAX_DOWN    = 350;
 
 function applyTransforms() {
   scene.style.transform = `translateY(${yPx}px) rotate(${angle}deg)`;
-
-  // Card lags behind the rope: pivot from its top-center (the clasp).
-  // dAngle > 0 → swinging right → card tilts left relative to scene.
-  const dAngle = angle - prevAngle;
-  prevAngle = angle;
-  const lagTarget = Math.max(-14, Math.min(14, -dAngle * 6));
-  cardLag += (lagTarget - cardLag) * 0.14;
-  cardEl.style.transform = `rotate(${cardLag}deg)`;
+  cardEl.style.transform = `rotate(${cardAngle}deg)`;
 }
 
 // ── Physics loop ──────────────────────────────────────────────────────────────
@@ -61,17 +54,27 @@ function physicsLoop() {
   yVel -= yPx * Y_STIFFNESS;
   yPx  += yVel;
 
+  // Secondary pendulum: card is driven by the rope's angular acceleration,
+  // then swings freely on its own with softer spring + higher damping.
+  const accel  = angularVel - prevAngVel;
+  prevAngVel   = angularVel;
+  cardAngVel  -= cardAngle * 0.06;   // soft spring pulls card back to centre
+  cardAngVel  += accel * 2.5;        // rope acceleration kicks the card
+  cardAngVel  *= 0.88;               // damps slower than main → lingers after jiggle
+  cardAngle   += cardAngVel;
+  cardAngle    = Math.max(-20, Math.min(20, cardAngle));
+
   applyTransforms();
 
   const settled =
-    Math.abs(angle) < 0.05 && Math.abs(angularVel) < 0.05 &&
-    Math.abs(yPx)   < 0.05 && Math.abs(yVel)       < 0.05 &&
-    Math.abs(cardLag) < 0.05;
+    Math.abs(angle)    < 0.05 && Math.abs(angularVel) < 0.05 &&
+    Math.abs(yPx)      < 0.05 && Math.abs(yVel)       < 0.05 &&
+    Math.abs(cardAngle)< 0.05 && Math.abs(cardAngVel) < 0.05;
 
   if (settled) {
     angle = 0; angularVel = 0;
     yPx   = 0; yVel       = 0;
-    cardLag = 0; prevAngle = 0;
+    cardAngle = 0; cardAngVel = 0; prevAngVel = 0;
     scene.style.transform = '';
     cardEl.style.transform = '';
     scene.style.willChange = '';
@@ -121,6 +124,7 @@ function endDrag(withVelocity) {
 scene.addEventListener('pointerdown', (e) => {
   isDragging = true;
   ptrHistory = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
+  prevAngVel = angularVel; // sync so first physics frame sees zero acceleration
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
   scene.setPointerCapture(e.pointerId);
   scene.classList.add('dragging');
