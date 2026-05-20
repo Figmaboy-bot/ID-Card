@@ -20,26 +20,25 @@ body {
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 321px;
+  width: calc(321px * var(--scale, 1));
 }
 
-/* Handles the vertical offset (hides the V-shape) and uniform scale */
+/* Handles the vertical offset (hides the V-shape) — no scale transform */
 .stage {
-  width: 321px;
-  height: 1014px;
-  transform-origin: top center;
+  width: calc(321px * var(--scale, 1));
+  height: calc(1014px * var(--scale, 1));
 }
 
 /* Pendulum rotation lives here */
 .scene {
   position: relative;
-  width: 321px;
-  height: 1014px;
+  width: calc(321px * var(--scale, 1));
+  height: calc(1014px * var(--scale, 1));
   transform-origin: center top;
   cursor: grab;
   user-select: none;
   touch-action: none;
-  will-change: transform;
+  /* will-change is applied via JS only during drag/animation */
 }
 
 .scene.dragging { cursor: grabbing; }
@@ -48,18 +47,18 @@ body {
   position: absolute;
   left: 0;
   top: 0;
-  width: 321px;
-  height: 763px;
+  width: calc(321px * var(--scale, 1));
+  height: calc(763px * var(--scale, 1));
   display: block;
   z-index: 2;
 }
 
 .card {
   position: absolute;
-  left: 54px;
-  top: 704px;
-  width: 206px;
-  height: 310px;
+  left: calc(54px * var(--scale, 1));
+  top: calc(704px * var(--scale, 1));
+  width: calc(206px * var(--scale, 1));
+  height: calc(310px * var(--scale, 1));
   z-index: 1;
 }
 
